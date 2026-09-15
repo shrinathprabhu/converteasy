@@ -328,6 +328,7 @@ function footer(p, popular) {
       </p>
       <p>Units, live currency and crypto rates, exact crypto denominations, dates and a calculator that understands units. No account, no cookies, no adverts. Works offline.</p>
       <p><a class="x-follow" href="${AUTHOR.x}" rel="me noopener">${xIcon()} Follow ${AUTHOR.handle} for the next lowkey tool</a></p>
+      <p><a href="${SITE.repository}" target="_blank" rel="noopener noreferrer">Source on GitHub ${svgIcon('external', 12)}</a></p>
     </div>
     <nav aria-labelledby="ft-tools">
       <h2 id="ft-tools">Converters</h2>

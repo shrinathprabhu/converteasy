@@ -12,6 +12,7 @@ export const SITE_URL = 'https://converteasy.lowkey.tools';
 
 export const SITE = {
   name: 'ConvertEasy',
+  repository: 'https://github.com/shrinathprabhu/converteasy',
   tagline: 'Convert anything. Calculate with units.',
   description:
     'Free unit, currency and crypto converter with a smart calculator that understands units. Live exchange rates, exact crypto decimals, dates and time zones. No account, works offline.',

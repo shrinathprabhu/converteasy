@@ -1,0 +1,5 @@
+# Cloudflare Workers Static Assets. Copied to dist/ by the build.
+/index / 308
+/index.html / 308
+/index/ / 308
+/:page/ /:page 308

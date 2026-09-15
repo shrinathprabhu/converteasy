@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: 'Geist';
+        src: url('../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2') format('woff2');
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: 'Geist Mono';
+        src: url('../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2') format('woff2');
+        font-weight: 100 900;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+      body {
+        font-family: 'Geist', system-ui, sans-serif;
+        background-color: #f7f6f2;
+        background-image: linear-gradient(rgba(22,24,29,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(22,24,29,.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+        color: #16181d;
+        padding: 64px 72px;
+        position: relative;
+      }
+      .brand { display: flex; align-items: center; gap: 18px; font-size: 34px; font-weight: 650; letter-spacing: -.02em; }
+      .brand b { color: #0a7a6b; font-weight: 650; }
+      .brand svg { width: 60px; height: 60px; }
+      h1 { margin: 36px 0 0; font-size: 78px; line-height: 1.02; letter-spacing: -.05em; font-weight: 700; }
+      h1 span { color: #0a7a6b; }
+      .card {
+        position: absolute; right: 64px; bottom: 40px; width: 500px;
+        background: #fff; border: 1px solid #e3e0d8; border-radius: 24px;
+        box-shadow: 0 20px 60px -20px rgba(22,24,29,.35); overflow: hidden;
+      }
+      .ruler { height: 14px; background-image: repeating-linear-gradient(90deg, #cdc8bd 0 2px, transparent 2px 14px); opacity: .8; }
+      .expr { font-family: 'Geist Mono', monospace; font-size: 34px; padding: 18px 28px 6px; letter-spacing: -.02em; }
+      .res { margin: 12px 20px 20px; padding: 16px 22px; border-radius: 16px; background: #dff1ec; border: 1px solid #9fd3c7; font-family: 'Geist Mono', monospace; }
+      .res small { display: block; font-family: 'Geist'; font-size: 16px; font-weight: 600; letter-spacing: .08em; color: #0a7a6b; }
+      .res b { font-size: 56px; letter-spacing: -.04em; }
+      .res em { font-style: normal; font-size: 30px; color: #5d6169; margin-left: 12px; }
+      .tags { position: absolute; left: 72px; bottom: 48px; display: grid; gap: 12px; font-size: 25px; color: #5d6169; }
+      .tags div::before { content: '→ '; color: #0a7a6b; }
+      .by { position: absolute; left: 72px; top: 610px; }
+      .foot { position: absolute; right: 72px; top: 76px; font-size: 22px; color: #5d6169; font-family: 'Geist Mono', monospace; }
+    </style>
+  </head>
+  <body>
+    <div class="brand">
+      <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#0a7a6b"/><g fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 24h32M39 16l8 8-8 8M49 40H17M25 32l-8 8 8 8"/></g><g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".55"><path d="M22 24v4M29 24v4M36 24v4"/></g></svg>
+      <span>Convert<b>Easy</b></span>
+    </div>
+    <div class="foot">by @shrinath_prabhu</div>
+    <h1>Convert anything.<br /><span>Calculate with units.</span></h1>
+    <div class="tags">
+      <div>Units, currency &amp; crypto</div>
+      <div>ETH · gwei · wei · sats</div>
+      <div>Free &amp; offline-ready</div>
+    </div>
+    <div class="card">
+      <div class="ruler"></div>
+      <div class="expr">1 cm + 1 m</div>
+      <div class="res"><small>RESULT</small><b>1.01</b><em>m · 101 cm</em></div>
+    </div>
+  </body>
+</html>

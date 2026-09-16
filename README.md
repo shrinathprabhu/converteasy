@@ -29,6 +29,7 @@ Node 22.18+.
 npm ci
 npm run dev        # build, serve like production, rebuild on change
 npm test           # engine + build audit (run after a build)
+npm run test:browser # Chrome layout + interaction checks; CHROME_BIN overrides its path
 npm run build      # → dist/
 npm start          # serve dist/ on http://localhost:4174/
 npm run assets     # re-render icons and og.png (needs Chrome; sharp is borrowed from a sibling project)

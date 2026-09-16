@@ -57,6 +57,11 @@ export function debounce(fn, ms = 120) {
   };
 }
 
+// A resolved Promise only queues a microtask; it does not let input or paint run.
+export function yieldToMain() {
+  return globalThis.scheduler?.yield ? scheduler.yield() : new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export const store = {
   get(key, fallback = null) {
     try {

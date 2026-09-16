@@ -45,8 +45,9 @@ export function mount(root, data) {
 
   const amount = h('input', { class: 'field-input', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false', enterkeyhint: 'done', 'aria-label': 'Amount', value: q.get('v') ?? data.value ?? '1' });
   const amountMsg = h('p', { class: 'field-msg', 'aria-live': 'polite' });
-  const fromPick = picker({ label: 'From currency', options: options([]), value: from, placeholder: 'Search currencies or crypto', onChange: (v) => ((from = v), sync()) });
-  const toPick = picker({ label: 'To currency', options: options([]), value: to, placeholder: 'Search currencies or crypto', onChange: (v) => ((to = v), sync()) });
+  const initialOptions = options([]);
+  const fromPick = picker({ label: 'From currency', options: initialOptions, value: from, placeholder: 'Search currencies or crypto', onChange: (v) => ((from = v), sync()) });
+  const toPick = picker({ label: 'To currency', options: initialOptions, value: to, placeholder: 'Search currencies or crypto', onChange: (v) => ((to = v), sync()) });
   const swapBtn = h('button', { type: 'button', class: 'swap', 'aria-label': 'Swap currencies' }, icon('swap', { size: 20 }));
 
   const big = h('output', { class: 'money-big', 'aria-live': 'polite' });
@@ -90,10 +91,18 @@ export function mount(root, data) {
     amountMsg.textContent = n.error ?? (n.computed ? `= ${formatNumber(n.value)}` : '');
     const a = usd(from);
     const b = usd(to);
+    // Keep ten real slots while rates load or fail, including partial feeds.
+    // This preserves the grid's geometry and communicates unavailable values.
+    replace(glance, GLANCE.filter((c) => c !== from).slice(0, 10).map((c) =>
+      h('li', {}, h('button', {
+        type: 'button', class: 'glance-item', dataset: { code: c },
+        disabled: !a || !usd(c), 'aria-label': `Convert to ${currencyName(c)}`,
+      }, h('span', { class: 'glance-code' }, flagOf(c) || '◈', ' ', c),
+      h('span', { class: 'glance-val num', text: a && usd(c) ? fmt(((n.value ?? 0) * a) / usd(c), c) : '—' }))),
+    ));
     if (!rates) {
       big.textContent = '…';
       rateLine.textContent = state?.error ? "Couldn't reach any rate source. Check your connection and try again." : 'Loading live rates…';
-      replace(glance);
       return;
     }
     if (!a || !b) {
@@ -107,21 +116,6 @@ export function mount(root, data) {
     big.dataset.plain = plainNumber(out, 12);
     const r1 = a / b;
     rateLine.textContent = `1 ${from} = ${fmt(r1, to)} ${to}  ·  1 ${to} = ${fmt(1 / r1, from)} ${from}`;
-    replace(
-      glance,
-      GLANCE.filter((c) => c !== from && usd(c)).slice(0, 10).map((c) =>
-        h(
-          'li',
-          {},
-          h(
-            'button',
-            { type: 'button', class: 'glance-item', dataset: { code: c }, 'aria-label': `Convert to ${currencyName(c)}` },
-            h('span', { class: 'glance-code' }, flagOf(c) || '◈', ' ', c),
-            h('span', { class: 'glance-val num', text: fmt(((n.value ?? 0) * a) / usd(c), c) }),
-          ),
-        ),
-      ),
-    );
   }
 
   function renderStatus() {

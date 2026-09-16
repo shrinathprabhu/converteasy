@@ -6,10 +6,10 @@
 // after a value, target units after "to". The main result card follows the
 // line the caret is on and has a unit dropdown for the answer.
 
-import { h, replace, store, params, setParams, copyWithToast, share, debounce, toast } from './dom.js';
+import { h, replace, store, params, setParams, copyWithToast, share, debounce, toast, yieldToMain } from './dom.js';
 import { icon } from './icons.js';
 import { picker } from './picker.js';
-import { calculate, describe, unitsFor, currencyUnit, unitByKey, tokenize } from '../core/calc.js';
+import { calculate, describe, unitsFor, currencyUnit, unitByKey } from '../core/calc.js';
 import { suggest, EXAMPLES } from '../core/suggest.js';
 import { ensureRates, usdValue, availableCodes, subscribe, ago } from '../core/rates.js';
 import { FIAT_CODES, CRYPTO, POPULAR_FIAT, POPULAR_CRYPTO, currencyName, flagOf } from '../data/money.js';
@@ -18,7 +18,7 @@ import { dataGroup, sizeHint, sortDataUnits } from '../data/units.js';
 
 const DEFAULT_DOC = ['1 cm + 1 m', '5 ft 11 in to cm', '3 m × 4 m', '$20 + €15 in INR'].join('\n');
 
-export function mount(root, opts = {}) {
+export async function mount(root, opts = {}) {
   const hero = opts.variant === 'hero';
   const urlQ = params().get('q');
   const saved = store.get('calc.doc');
@@ -30,6 +30,10 @@ export function mount(root, opts = {}) {
   let activeLine = 0;
   let lastSuggest = null;
   let ratesRequested = false;
+  let revision = 0;
+  let ratesRevision = 0;
+  let evaluatedKey = '';
+  let evaluating = false;
 
   const ctx = {
     get dataMode() {
@@ -105,12 +109,15 @@ export function mount(root, opts = {}) {
   );
 
   // ---- evaluation ---------------------------------------------------------
-  function evaluateAll() {
+  async function evaluateAll(ticket) {
     const lines = ta.value.split('\n');
     let ans = null;
     let needsRates = false;
-    results = lines.map((line, i) => {
+    const next = [];
+    let started = performance.now();
+    for (const [i, line] of lines.entries()) {
       let r = calculate(line, { ...ctx, ans });
+      if (r.tokens?.some((t) => t.t === 'unit' && t.unit.currency)) needsRates = true;
       if (!r.ok && /rates are still loading|No live rate/.test(r.error)) {
         needsRates = true;
         // Before the first rates arrive this is a wait, not a mistake.
@@ -124,12 +131,20 @@ export function mount(root, opts = {}) {
         }
       }
       if (r.ok && r.q && !r.empty) ans = { q: r.q, unit: r.unit };
-      return { line, r, i };
-    });
+      next.push({ line, r, i });
+      // Preserve sequential "ans" semantics while allowing edits to supersede
+      // a long paste. Never publish results from an abandoned calculation.
+      if (performance.now() - started >= 8) {
+        await yieldToMain();
+        if (ticket !== revision) return null;
+        started = performance.now();
+      }
+    }
     if (needsRates && !ratesRequested) {
       ratesRequested = true;
-      ensureRates();
+      setTimeout(() => ensureRates(), 0);
     }
+    return next;
   }
 
   function caretLine() {
@@ -237,25 +252,38 @@ export function mount(root, opts = {}) {
     live.textContent = r.kind === 'quantity' ? `Result ${r.number} ${r.unit.plural ?? r.symbol}` : `Result ${r.text}`;
   }, 700);
 
-  function renderLines() {
+  let renderedResults = null;
+  async function renderLines(ticket) {
+    if (renderedResults === results) {
+      for (const row of linesEl.children) row.classList.toggle('active', Number(row.firstElementChild.dataset.line) === activeLine);
+      return;
+    }
     const nonEmpty = results.filter((x) => !x.r.empty);
-    root.querySelector('.calc-bar').classList.toggle('single', nonEmpty.length <= 1);
-    replace(
-      linesEl,
-      nonEmpty.map(({ line, r, i }) =>
+    const fragment = document.createDocumentFragment();
+    let started = performance.now();
+    for (const { line, r, i } of nonEmpty) {
+      const output = r.ok ? (r.kind === 'quantity' ? `${r.number} ${r.symbol}` : r.text) : r.incomplete ? '…' : '⚠';
+      fragment.append(h(
+        'li',
+        { class: `line${i === activeLine ? ' active' : ''}${!r.ok ? (r.incomplete ? ' pending' : ' error') : ''}` },
         h(
-          'li',
-          { class: `line${i === activeLine ? ' active' : ''}${!r.ok ? (r.incomplete ? ' pending' : ' error') : ''}` },
-          h(
-            'button',
-            { type: 'button', class: 'line-btn', dataset: { line: String(i) }, 'aria-label': `Go to line ${i + 1}: ${line}` },
-            h('span', { class: 'line-no', text: String(i + 1) }),
-            h('span', { class: 'line-src', text: line }),
-            h('span', { class: 'line-out', text: r.ok ? (r.kind === 'quantity' ? `${r.number} ${r.symbol}` : r.text) : r.incomplete ? '…' : '⚠' }),
-          ),
+          'button',
+          { type: 'button', class: 'line-btn', dataset: { line: String(i) }, 'aria-label': `Go to line ${i + 1}: ${line}` },
+          h('span', { class: 'line-no', text: String(i + 1) }),
+          h('span', { class: 'line-src', text: line }),
+          h('span', { class: 'line-out', title: output, text: output }),
         ),
-      ),
-    );
+      ));
+      if (performance.now() - started >= 8) {
+        await yieldToMain();
+        if (ticket !== revision) return;
+        started = performance.now();
+      }
+    }
+    if (ticket !== revision) return;
+    root.querySelector('.calc-bar').classList.toggle('single', nonEmpty.length <= 1);
+    replace(linesEl, fragment);
+    renderedResults = results;
   }
 
   function renderSuggest() {
@@ -295,17 +323,34 @@ export function mount(root, opts = {}) {
   }
 
   function autosize() {
+    if (CSS.supports('field-sizing', 'content')) return;
     ta.style.height = 'auto';
     ta.style.height = `${Math.min(ta.scrollHeight + 2, hero ? 360 : 420)}px`;
   }
 
-  function update() {
+  async function update() {
+    const ticket = ++revision;
     activeLine = caretLine();
-    evaluateAll();
+    const key = JSON.stringify([ta.value, choices, getDataMode(), ratesRevision]);
+    if (key !== evaluatedKey) {
+      evaluating = true;
+      copyBtn.disabled = shareBtn.disabled = true;
+      chips.inert = true;
+      lastSuggest = null;
+      resultCard.setAttribute('aria-busy', 'true');
+      const next = await evaluateAll(ticket);
+      if (!next || ticket !== revision) return;
+      results = next;
+      evaluatedKey = key;
+    }
+    evaluating = false;
+    copyBtn.disabled = shareBtn.disabled = false;
+    chips.inert = false;
+    resultCard.removeAttribute('aria-busy');
     renderResult();
-    renderLines();
     renderSuggest();
     autosize();
+    await renderLines(ticket);
   }
 
   const persist = debounce(() => {
@@ -315,6 +360,7 @@ export function mount(root, opts = {}) {
 
   // ---- insertion ----------------------------------------------------------
   function insert(item) {
+    if (evaluating || !item) return;
     const v = ta.value;
     const pos = ta.selectionStart ?? v.length;
     if (item.kind === 'example') {
@@ -357,12 +403,13 @@ export function mount(root, opts = {}) {
     if (e.key === 'Tab' && !e.shiftKey && lastSuggest?.partial && chips._items?.[0]?.kind === 'unit') {
       e.preventDefault();
       insert(chips._items[0]);
-    } else if (e.key === 'Enter' && !e.shiftKey) {
+    } else if (e.key === 'Enter' && !e.shiftKey && !evaluating) {
       const r = results[caretLine()]?.r;
       if (r?.ok && !r.empty) remember(results[caretLine()].line);
     }
   });
   ta.addEventListener('blur', () => {
+    if (evaluating) return;
     const r = results[activeLine];
     if (r?.r.ok && !r.r.empty) remember(r.line);
   });
@@ -456,21 +503,12 @@ export function mount(root, opts = {}) {
   let subscribeState = null;
   subscribe((st) => {
     subscribeState = st;
+    ratesRevision += 1;
     if (ratesRequested) update();
   });
-  if (/[$€£¥₹₿]|\b[A-Z]{3,4}\b/.test(ta.value)) {
-    try {
-      if (tokenize(ta.value.replace(/\n/g, ' ')).some((t) => t.t === 'unit' && t.unit.currency)) {
-        ratesRequested = true;
-        ensureRates();
-      }
-    } catch {
-      /* evaluated per line below */
-    }
-  }
 
   if (urlQ) ta.setSelectionRange(ta.value.length, ta.value.length);
-  update();
+  await update();
   if (opts.autofocus && matchMedia('(pointer: fine)').matches) ta.focus({ preventScroll: true });
   return { update };
 }

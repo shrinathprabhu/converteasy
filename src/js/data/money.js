@@ -191,13 +191,17 @@ export function flagOf(code) {
 }
 
 let fiatNames;
+const nameCache = new Map();
 /** English name for a fiat code via Intl, falling back to the code. */
 export function currencyName(code) {
   const crypto = CRYPTO_BY_CODE.get(code);
   if (crypto) return crypto.name;
+  if (nameCache.has(code)) return nameCache.get(code);
   try {
     fiatNames ??= new Intl.DisplayNames(['en'], { type: 'currency' });
-    return fiatNames.of(code) || code;
+    const name = fiatNames.of(code) || code;
+    nameCache.set(code, name);
+    return name;
   } catch {
     return code;
   }

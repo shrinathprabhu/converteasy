@@ -94,6 +94,7 @@
 }
 
 html {
+  scrollbar-gutter: stable;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-padding-top: 5rem;
@@ -341,6 +342,12 @@ button {
   height: 36px;
 }
 
+/* Install availability arrives asynchronously. Keep its place in the header. */
+.install-btn[hidden] {
+  display: inline-flex !important;
+  visibility: hidden;
+}
+
 @media (max-width: 760px) {
   .top-inner {
     flex-wrap: wrap;
@@ -376,8 +383,13 @@ button {
 
 /* ------------------------------------------------------------------ layout */
 
-main {
+:is(main, .top-inner, .foot-inner) {
+  width: 100%;
   max-width: var(--maxw);
+  min-width: 0;
+}
+
+main {
   margin: 0 auto;
   padding: 1.25rem max(1rem, env(safe-area-inset-left)) 2rem max(1rem, env(safe-area-inset-right));
 }
@@ -474,20 +486,33 @@ h1 .accent {
   min-height: var(--tool-min, 18rem);
 }
 
-.tool[data-kind='calculator'] {
-  --tool-min: 26rem;
+/* Reserve the mounted controls before their split module arrives. These are
+   minimums, never fixed heights: zoom, translated text and user input can grow.
+   Keep the same space after loading so content below does not jump upwards. */
+.tool-body { min-block-size: var(--tool-body-min, 18rem); }
+.tool[data-kind='calculator'] { --tool-body-min: 48rem; }
+.tool[data-kind='units'] { --tool-body-min: 19rem; }
+.tool[data-kind='currency'] { --tool-body-min: 28rem; }
+.tool[data-kind='crypto'] { --tool-body-min: 26rem; }
+.tool[data-kind='date'] { --tool-body-min: 32rem; }
+.tool[data-kind='cooking'] { --tool-body-min: 44rem; }
+.tool[data-kind='numberbase'] { --tool-body-min: 35rem; }
+
+@media (min-width: 900px) {
+  .tool[data-kind='units'] { --tool-body-min: 44rem; }
+  .all-units .table-wrap { block-size: 22rem; overflow: auto; }
 }
-.tool[data-kind='units'] {
-  --tool-min: 22rem;
+
+@media (max-width: 760px) {
+  .tool[data-kind='calculator'] { --tool-body-min: 52rem; }
+  .tool[data-kind='units'] { --tool-body-min: 34rem; }
+  .tool[data-kind='currency'] { --tool-body-min: 60rem; }
+  .tool[data-kind='date'] { --tool-body-min: 52rem; }
+  .tool[data-kind='cooking'] { --tool-body-min: 57rem; }
 }
-.tool[data-kind='currency'] {
-  --tool-min: 22rem;
-}
-.tool[data-kind='crypto'] {
-  --tool-min: 26rem;
-}
-.tool[data-kind='date'] {
-  --tool-min: 24rem;
+
+@media (min-width: 480px) and (max-width: 760px) {
+  .tool[data-kind='currency'] { --tool-body-min: 44rem; }
 }
 
 .tool-body:not(.ready) .tool-fallback {
@@ -502,20 +527,13 @@ h1 .accent {
 .tool-fallback .skeleton {
   height: 3.4rem;
   border-radius: 12px;
-  background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  background: var(--surface-3);
+  animation: pulse 1.4s ease-in-out infinite;
   margin-bottom: 0.75rem;
 }
 
 .tool-body.failed .tool-fallback::after {
   content: 'Something went wrong loading the tool. Reload the page to try again.';
-}
-
-@keyframes shimmer {
-  to {
-    background-position: -200% 0;
-  }
 }
 
 .noscript {
@@ -555,6 +573,8 @@ h1 .accent {
 }
 
 .calc-input {
+  field-sizing: content;
+  max-block-size: 420px;
   display: block;
   width: 100%;
   min-height: 3.6rem;
@@ -571,6 +591,7 @@ h1 .accent {
 }
 
 .calc-hero .calc-input {
+  max-block-size: 360px;
   font-size: clamp(1.15rem, 3.8vw, 1.5rem);
 }
 
@@ -705,6 +726,11 @@ h1 .accent {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.4rem 0.75rem;
+  min-block-size: 3.6rem;
+}
+
+@media (max-width: 760px) {
+  .result-main { min-block-size: 6.5rem; }
 }
 
 .result-value {
@@ -737,6 +763,7 @@ h1 .accent {
 }
 
 .result-expr {
+  min-block-size: 3.2em;
   margin: 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
@@ -758,8 +785,11 @@ h1 .accent {
 
 .result-status:empty,
 .result-alt:empty {
-  display: none;
+  visibility: hidden;
 }
+
+.result-alt { min-block-size: 1.6em; }
+.result-status { min-block-size: 3.2em; }
 
 .calc-bar {
   display: flex;
@@ -828,6 +858,9 @@ h1 .accent {
 .line-out {
   font-weight: 600;
   white-space: nowrap;
+  max-inline-size: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .line.error .line-out {
@@ -1400,9 +1433,18 @@ caption.mini-title {
   margin: 0;
   font-size: 0.82rem;
   color: var(--muted);
+  min-block-size: 3.2em;
+}
+
+.money .formula,
+.crypto .formula { min-block-size: 3.2em; }
+
+@media (max-width: 760px) {
+  .money .rate-status { flex-basis: 100%; }
 }
 
 .dot-status {
+  flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -1540,6 +1582,20 @@ caption.mini-title {
   display: grid;
   gap: 0.9rem;
   outline: none;
+}
+
+/* Only opacity and transforms animate; layout dimensions remain untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  .tool-body.ready > :first-child,
+  .tabpanel:not([hidden]) {
+    animation: reveal 160ms ease-out;
+  }
+  .tab, .glance-item { transition: background-color 150ms, border-color 150ms, color 150ms; }
+}
+
+@keyframes reveal {
+  from { opacity: 0.6; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .date-grid {

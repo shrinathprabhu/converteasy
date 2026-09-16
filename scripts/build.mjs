@@ -49,6 +49,19 @@ export async function runBuild() {
     metafile: true,
     logLevel: 'warning',
   };
+  const fontDisplayPlugin = {
+    name: 'stable-font-display',
+    setup(b) {
+      b.onLoad({ filter: /@fontsource-variable[\\/]geist(?:-mono)?[\\/]wght\.css$/ }, async ({ path }) => ({
+        // Preserve Fontsource's subset definitions, but don't swap metrics
+        // after text is visible on a slow connection. Preloads keep fast loads
+        // in Geist; later navigations can use the cached face.
+        contents: (await readFile(path, 'utf8')).replace(/font-display:\s*swap/g, 'font-display: optional'),
+        loader: 'css',
+        resolveDir: dirname(path),
+      }));
+    },
+  };
   const app = await build({
     ...common,
     entryPoints: { app: join(root, 'src/js/app.js'), styles: join(root, 'src/css/app.css') },
@@ -60,7 +73,7 @@ export async function runBuild() {
     assetNames: 'f/[name]-[hash]',
     publicPath: `/assets`,
     loader: { '.woff2': 'file', '.woff': 'file' },
-    plugins: [configPlugin],
+    plugins: [configPlugin, fontDisplayPlugin],
   });
   const theme = await build({
     ...common,

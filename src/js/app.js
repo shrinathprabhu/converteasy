@@ -2,7 +2,7 @@
 // for this page. Pages are static HTML; the body's data attributes say which
 // tool to mount and with what defaults.
 
-import { toast } from './ui/dom.js';
+import { toast, yieldToMain } from './ui/dom.js';
 
 // Trusted Types: the CSP requires them, and the only sink this app touches is
 // the service worker URL. Everything else is textContent and createElement.
@@ -56,8 +56,11 @@ async function mountTool() {
   if (!root || !load) return;
   try {
     const mod = await load();
+    // Separate module evaluation from mounting, leaving an opportunity to paint
+    // the reserved shell and respond to input on slower devices.
+    await yieldToMain();
+    await mod.mount(root, data);
     root.classList.add('ready');
-    mod.mount(root, data);
   } catch (err) {
     // A chunk from an older deploy can vanish mid-session: reload once.
     if (!sessionStorage.getItem('ce-reloaded')) {
